@@ -14,8 +14,10 @@ if ($argc !== 3) {
 }
 
 [$script, $username, $email] = $argv;
-$displayName = trim((string) readline('Admin display name: '));
-$password = (string) readline('Admin password (minimum 12 characters): ');
+fwrite(STDOUT, 'Admin display name: ');
+$displayName = trim((string) fgets(STDIN));
+fwrite(STDOUT, 'Admin password (minimum 12 characters): ');
+$password = trim((string) fgets(STDIN));
 
 if (!preg_match('/^[A-Za-z0-9._-]{3,50}$/', $username)) {
     fwrite(STDERR, "Username must be 3-50 characters: letters, numbers, dot, underscore, or hyphen.\n");

@@ -149,4 +149,5 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 INSERT IGNORE INTO app_settings (setting_key, setting_value) VALUES
   ('monitor_interval_seconds', '60'),
   ('offline_after_failures', '2'),
-  ('probe_timeout_ms', '1500');
+  ('probe_timeout_ms', '1500'),
+  ('worker_token_hash', '');

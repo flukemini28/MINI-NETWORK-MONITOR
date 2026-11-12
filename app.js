@@ -1,36 +1,4 @@
-const STORAGE_KEY = "mini-network-monitor-demo-v1";
-
-const initialData = {
-  networks: [
-    { id: "net-1", name: "เครือข่ายสำนักงาน", cidr: "192.168.10.0/24", gateway: "192.168.10.1", department: "สำนักงาน", active: true },
-    { id: "net-2", name: "เครือข่ายห้องตรวจ", cidr: "192.168.20.0/24", gateway: "192.168.20.1", department: "ผู้ป่วยนอก", active: true },
-    { id: "net-3", name: "เครือข่ายแม่ข่าย", cidr: "10.10.1.0/24", gateway: "10.10.1.1", department: "เทคโนโลยีสารสนเทศ", active: true }
-  ],
-  devices: [
-    { id: "dev-1", name: "Core Switch ชั้น 1", ip: "192.168.10.2", type: "switch", networkId: "net-1", department: "เทคโนโลยีสารสนเทศ", location: "ห้อง Server", status: "online", response: 2.4, checkedAt: new Date(Date.now() - 38000).toISOString(), active: true },
-    { id: "dev-2", name: "File Server", ip: "10.10.1.10", type: "server", networkId: "net-3", department: "เทคโนโลยีสารสนเทศ", location: "ห้อง Server", status: "online", response: 5.8, checkedAt: new Date(Date.now() - 52000).toISOString(), active: true },
-    { id: "dev-3", name: "เครื่องพิมพ์เวชระเบียน", ip: "192.168.10.45", type: "printer", networkId: "net-1", department: "เวชระเบียน", location: "เคาน์เตอร์ 1", status: "offline", response: null, checkedAt: new Date(Date.now() - 210000).toISOString(), active: true },
-    { id: "dev-4", name: "เครื่องตรวจ OPD 01", ip: "192.168.20.21", type: "computer", networkId: "net-2", department: "ผู้ป่วยนอก", location: "ห้องตรวจ 1", status: "online", response: 12.6, checkedAt: new Date(Date.now() - 41000).toISOString(), active: true },
-    { id: "dev-5", name: "Access Point โถงกลาง", ip: "192.168.20.5", type: "router", networkId: "net-2", department: "เทคโนโลยีสารสนเทศ", location: "โถงกลาง", status: "unknown", response: null, checkedAt: null, active: true },
-    { id: "dev-6", name: "เครื่องพิมพ์ห้องยา", ip: "192.168.20.60", type: "printer", networkId: "net-2", department: "เภสัชกรรม", location: "ห้องจ่ายยา", status: "online", response: 8.1, checkedAt: new Date(Date.now() - 67000).toISOString(), active: true },
-    { id: "dev-7", name: "Application Server", ip: "10.10.1.11", type: "server", networkId: "net-3", department: "เทคโนโลยีสารสนเทศ", location: "ห้อง Server", status: "online", response: 3.2, checkedAt: new Date(Date.now() - 27000).toISOString(), active: true }
-  ],
-  history: [
-    { id: "hist-1", deviceId: "dev-3", status: "offline", response: null, checkedAt: new Date(Date.now() - 210000).toISOString(), detail: "ไม่ตอบสนองหลังตรวจซ้ำ" },
-    { id: "hist-2", deviceId: "dev-1", status: "online", response: 2.4, checkedAt: new Date(Date.now() - 38000).toISOString(), detail: "ตอบสนองปกติ" },
-    { id: "hist-3", deviceId: "dev-2", status: "online", response: 5.8, checkedAt: new Date(Date.now() - 52000).toISOString(), detail: "ตอบสนองปกติ" },
-    { id: "hist-4", deviceId: "dev-4", status: "online", response: 12.6, checkedAt: new Date(Date.now() - 41000).toISOString(), detail: "ตอบสนองปกติ" },
-    { id: "hist-5", deviceId: "dev-6", status: "online", response: 8.1, checkedAt: new Date(Date.now() - 67000).toISOString(), detail: "ตอบสนองปกติ" },
-    { id: "hist-6", deviceId: "dev-7", status: "online", response: 3.2, checkedAt: new Date(Date.now() - 27000).toISOString(), detail: "ตอบสนองปกติ" }
-  ],
-  alerts: [
-    { id: "alert-1", deviceId: "dev-3", createdAt: new Date(Date.now() - 210000).toISOString(), acknowledged: false, acknowledgedAt: null }
-  ],
-  settings: { interval: 60, retries: 2 }
-};
-
-let data = loadData();
-let activePage = "overview";
+let data = { networks: [], devices: [], history: [], alerts: [], settings: { interval: 60, retries: 2, timeout: 1500 } };
 let editing = null;
 let toastTimer;
 
@@ -39,32 +7,27 @@ const labels = {
   type: { computer: "คอมพิวเตอร์", server: "เซิร์ฟเวอร์", printer: "เครื่องพิมพ์", router: "เราเตอร์", switch: "สวิตช์", other: "อื่น ๆ" }
 };
 
-function clone(value) {
-  return JSON.parse(JSON.stringify(value));
+async function apiRequest(path, options = {}) {
+  const headers = { Accept: "application/json", ...(options.headers || {}) };
+  if (options.method && options.method !== "GET") {
+    headers["Content-Type"] = "application/json";
+    headers["X-CSRF-Token"] = document.querySelector('meta[name="csrf-token"]')?.content || "";
+  }
+  const response = await fetch(`api/${path}`, { credentials: "same-origin", ...options, headers });
+  let result;
+  try {
+    result = await response.json();
+  } catch (error) {
+    throw new Error("เซิร์ฟเวอร์ส่งข้อมูลกลับมาไม่ถูกต้อง");
+  }
+  if (!response.ok) throw new Error(result.error || `คำขอล้มเหลว (${response.status})`);
+  return result;
 }
 
-function loadData() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return clone(initialData);
-    const parsed = JSON.parse(saved);
-    if (!Array.isArray(parsed.devices) || !Array.isArray(parsed.networks)) throw new Error("รูปแบบข้อมูลไม่ถูกต้อง");
-    return { ...clone(initialData), ...parsed };
-  } catch (error) {
-    console.error("ไม่สามารถอ่านข้อมูลตัวอย่างจากเบราว์เซอร์ได้", error);
-    return clone(initialData);
-  }
-}
-
-function saveData() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    return true;
-  } catch (error) {
-    console.error("ไม่สามารถบันทึกข้อมูลตัวอย่างได้", error);
-    showToast("บันทึกข้อมูลไม่สำเร็จ กรุณาตรวจสอบพื้นที่จัดเก็บของเบราว์เซอร์");
-    return false;
-  }
+async function refreshData() {
+  const result = await apiRequest("data.php");
+  data = result;
+  render();
 }
 
 function escapeHtml(value) {
@@ -72,11 +35,15 @@ function escapeHtml(value) {
 }
 
 function getNetwork(id) {
-  return data.networks.find(network => network.id === id);
+  return data.networks.find(network => String(network.id) === String(id));
 }
 
 function getDevice(id) {
-  return data.devices.find(device => device.id === id);
+  return data.devices.find(device => String(device.id) === String(id));
+}
+
+function canManage() {
+  return ["admin", "operator"].includes(document.body.dataset.userRole);
 }
 
 function statusPill(status) {
@@ -158,7 +125,7 @@ function renderOverview() {
   document.getElementById("network-summary").innerHTML = networkRows || '<div class="empty-inline">ยังไม่มีเครือข่ายที่มีอุปกรณ์</div>';
 
   const attention = devices.filter(device => device.status !== "online").sort((a, b) => a.status === "offline" ? -1 : b.status === "offline" ? 1 : 0).slice(0, 5);
-  document.getElementById("attention-table").innerHTML = attention.length ? attention.map(device => `<tr><td><div class="device-cell">${deviceIcon(device.type)}<span class="device-name"><strong>${escapeHtml(device.name)}</strong><small>${escapeHtml(labels.type[device.type] || labels.type.other)}</small></span></div></td><td><span class="ip-text">${escapeHtml(device.ip)}</span></td><td>${escapeHtml(getNetwork(device.networkId)?.name || "—")}</td><td>${statusPill(device.status)}</td><td><span class="response ${device.response == null ? "none" : ""}">${device.response == null ? "—" : `${device.response} ms`}</span></td><td><span class="time-cell">${escapeHtml(relativeTime(device.checkedAt))}</span></td><td><button class="row-menu" data-edit-device="${device.id}" aria-label="แก้ไขอุปกรณ์">···</button></td></tr>`).join("") : '<tr><td class="table-empty" colspan="7">ไม่มีอุปกรณ์ที่ต้องติดตาม</td></tr>';
+  document.getElementById("attention-table").innerHTML = attention.length ? attention.map(device => `<tr><td><div class="device-cell">${deviceIcon(device.type)}<span class="device-name"><strong>${escapeHtml(device.name)}</strong><small>${escapeHtml(labels.type[device.type] || labels.type.other)}</small></span></div></td><td><span class="ip-text">${escapeHtml(device.ip)}</span></td><td>${escapeHtml(getNetwork(device.networkId)?.name || "—")}</td><td>${statusPill(device.status)}</td><td><span class="response ${device.response == null ? "none" : ""}">${device.response == null ? "—" : `${device.response} ms`}</span></td><td><span class="time-cell">${escapeHtml(relativeTime(device.checkedAt))}</span></td><td>${canManage() ? `<button class="row-menu" data-edit-device="${device.id}" aria-label="แก้ไขอุปกรณ์">···</button>` : ""}</td></tr>`).join("") : '<tr><td class="table-empty" colspan="7">ไม่มีอุปกรณ์ที่ต้องติดตาม</td></tr>';
 
   const recent = [...data.history].sort((a, b) => new Date(b.checkedAt) - new Date(a.checkedAt)).slice(0, 4);
   document.getElementById("activity-list").innerHTML = recent.length ? recent.map(record => {
@@ -180,10 +147,10 @@ function renderDevices() {
   if ([...networkSelect.options].some(option => option.value === currentNetwork)) networkSelect.value = currentNetwork;
   const filtered = data.devices.filter(device => device.active).filter(device => {
     const matchesSearch = `${device.name} ${device.ip} ${device.department} ${device.location}`.toLowerCase().includes(search);
-    return matchesSearch && (!status || device.status === status) && (!network || device.networkId === network);
+    return matchesSearch && (!status || device.status === status) && (!network || String(device.networkId) === network);
   });
   document.getElementById("device-result-count").textContent = `${filtered.length} รายการ`;
-  document.getElementById("devices-table").innerHTML = filtered.length ? filtered.map(device => `<tr><td><div class="device-cell">${deviceIcon(device.type)}<span class="device-name"><strong>${escapeHtml(device.name)}</strong><small>${escapeHtml(device.department || "ไม่ระบุหน่วยงาน")}</small></span></div></td><td><span class="ip-text">${escapeHtml(device.ip)}</span></td><td>${escapeHtml(labels.type[device.type] || labels.type.other)}</td><td>${escapeHtml(getNetwork(device.networkId)?.name || "—")}</td><td>${escapeHtml([device.department, device.location].filter(Boolean).join(" · ") || "—")}</td><td>${statusPill(device.status)}</td><td><span class="response ${device.response == null ? "none" : device.response > 10 ? "slow" : ""}">${device.response == null ? "—" : `${device.response} ms`}</span></td><td><span class="time-cell">${escapeHtml(relativeTime(device.checkedAt))}</span></td><td><button class="row-menu" data-edit-device="${device.id}" aria-label="แก้ไขอุปกรณ์">···</button></td></tr>`).join("") : '<tr><td class="table-empty" colspan="9">ไม่พบอุปกรณ์ที่ตรงกับเงื่อนไข</td></tr>';
+  document.getElementById("devices-table").innerHTML = filtered.length ? filtered.map(device => `<tr><td><div class="device-cell">${deviceIcon(device.type)}<span class="device-name"><strong>${escapeHtml(device.name)}</strong><small>${escapeHtml(device.department || "ไม่ระบุหน่วยงาน")}</small></span></div></td><td><span class="ip-text">${escapeHtml(device.ip)}</span></td><td>${escapeHtml(labels.type[device.type] || labels.type.other)}</td><td>${escapeHtml(getNetwork(device.networkId)?.name || "—")}</td><td>${escapeHtml([device.department, device.location].filter(Boolean).join(" · ") || "—")}</td><td>${statusPill(device.status)}</td><td><span class="response ${device.response == null ? "none" : device.response > 10 ? "slow" : ""}">${device.response == null ? "—" : `${device.response} ms`}</span></td><td><span class="time-cell">${escapeHtml(relativeTime(device.checkedAt))}</span></td><td>${canManage() ? `<button class="row-menu" data-edit-device="${device.id}" aria-label="แก้ไขอุปกรณ์">···</button> <button class="deactivate-button" data-deactivate-device="${device.id}">ปิด</button>` : ""}</td></tr>`).join("") : '<tr><td class="table-empty" colspan="9">ไม่พบอุปกรณ์ที่ตรงกับเงื่อนไข</td></tr>';
 }
 
 function renderNetworks() {
@@ -191,7 +158,7 @@ function renderNetworks() {
   if (!container) return;
   container.innerHTML = data.networks.length ? data.networks.map(network => {
     const count = data.devices.filter(device => device.active && device.networkId === network.id).length;
-    return `<article class="panel network-card"><div class="network-card-head"><div class="network-card-title"><span class="network-symbol">⌘</span><span><h2>${escapeHtml(network.name)}</h2><small>${escapeHtml(network.department || "ไม่ระบุหน่วยงาน")}</small></span></div><button class="network-actions" data-edit-network="${network.id}" aria-label="แก้ไขเครือข่าย">···</button></div><div class="network-info"><span><label>NETWORK / CIDR</label><strong>${escapeHtml(network.cidr)}</strong></span><span><label>GATEWAY</label><strong>${escapeHtml(network.gateway || "—")}</strong></span></div><div class="network-card-foot"><span class="network-device-count"><strong>${count}</strong> อุปกรณ์</span><span class="network-active ${network.active ? "" : "inactive"}">${network.active ? "ใช้งาน" : "ปิดใช้งาน"}</span></div></article>`;
+    return `<article class="panel network-card"><div class="network-card-head"><div class="network-card-title"><span class="network-symbol">⌘</span><span><h2>${escapeHtml(network.name)}</h2><small>${escapeHtml(network.department || "ไม่ระบุหน่วยงาน")}</small></span></div>${canManage() ? `<button class="network-actions" data-edit-network="${network.id}" aria-label="แก้ไขเครือข่าย">แก้ไข</button> <button class="deactivate-button" data-deactivate-network="${network.id}">ปิดใช้งาน</button>` : ""}</div><div class="network-info"><span><label>NETWORK / CIDR</label><strong>${escapeHtml(network.cidr)}</strong></span><span><label>GATEWAY</label><strong>${escapeHtml(network.gateway || "—")}</strong></span></div><div class="network-card-foot"><span class="network-device-count"><strong>${count}</strong> อุปกรณ์</span><span class="network-active ${network.active ? "" : "inactive"}">${network.active ? "ใช้งาน" : "ปิดใช้งาน"}</span></div></article>`;
   }).join("") : '<div class="panel empty-inline">ยังไม่มีข้อมูลเครือข่าย</div>';
 }
 
@@ -226,16 +193,26 @@ function renderAlerts() {
   });
   document.getElementById("alerts-list").innerHTML = alerts.length ? alerts.map(alert => {
     const device = getDevice(alert.deviceId);
-    return `<div class="alert-item ${alert.acknowledged ? "acknowledged" : ""}"><span class="alert-symbol">${alert.acknowledged ? "✓" : "!"}</span><div class="alert-content"><strong>${escapeHtml(device?.name || "อุปกรณ์ที่ถูกลบ")} ไม่ตอบสนอง</strong><p>${escapeHtml(device?.ip || "—")} · ${escapeHtml(getNetwork(device?.networkId)?.name || "ไม่ระบุเครือข่าย")}</p><small>${escapeHtml(fullDate(alert.createdAt))}${alert.acknowledged ? ` · รับทราบโดย ${escapeHtml(alert.acknowledgedBy || "เจ้าหน้าที่ระบบ")} เมื่อ ${escapeHtml(fullDate(alert.acknowledgedAt))}` : ""}</small></div><div class="alert-actions">${alert.acknowledged ? '<span class="ack-label">รับทราบแล้ว</span>' : `<button class="ack-button" data-ack-alert="${alert.id}">ทำเครื่องหมายรับทราบ</button>`}</div></div>`;
+    return `<div class="alert-item ${alert.acknowledged ? "acknowledged" : ""}"><span class="alert-symbol">${alert.acknowledged ? "✓" : "!"}</span><div class="alert-content"><strong>${escapeHtml(device?.name || "อุปกรณ์ที่ถูกลบ")} ไม่ตอบสนอง</strong><p>${escapeHtml(device?.ip || "—")} · ${escapeHtml(getNetwork(device?.networkId)?.name || "ไม่ระบุเครือข่าย")}</p><small>${escapeHtml(fullDate(alert.createdAt))}${alert.acknowledged ? ` · รับทราบโดย ${escapeHtml(alert.acknowledgedBy || "เจ้าหน้าที่ระบบ")} เมื่อ ${escapeHtml(fullDate(alert.acknowledgedAt))}` : ""}</small></div><div class="alert-actions">${alert.acknowledged ? '<span class="ack-label">รับทราบแล้ว</span>' : canManage() ? `<button class="ack-button" data-ack-alert="${alert.id}">ทำเครื่องหมายรับทราบ</button>` : ""}</div></div>`;
   }).join("") : '<div class="empty-inline">ไม่มีรายการแจ้งเตือน</div>';
 }
 
 function renderSettings() {
   const interval = document.getElementById("interval-setting");
   const retries = document.getElementById("retries-setting");
-  if (!interval || !retries) return;
-  interval.value = data.settings.interval;
-  retries.value = data.settings.retries;
+  if (interval && retries) {
+    interval.value = data.settings.interval;
+    retries.value = data.settings.retries;
+  }
+  const workerStatus = document.getElementById("worker-status");
+  if (workerStatus) {
+    const statusLabels = { running: "กำลังทำงาน", error: "พบข้อผิดพลาด", stopped: "หยุดทำงาน" };
+    workerStatus.textContent = statusLabels[data.worker?.status] || "ยังไม่มีข้อมูล";
+    workerStatus.classList.toggle("pending-status", data.worker?.status !== "running");
+    workerStatus.classList.toggle("demo-status", data.worker?.status === "running");
+  }
+  const workerLastSeen = document.getElementById("worker-last-seen");
+  if (workerLastSeen) workerLastSeen.textContent = data.worker?.last_seen_at ? fullDate(data.worker.last_seen_at) : "ยังไม่มี heartbeat";
 }
 
 function openDeviceForm(device = null) {
@@ -280,7 +257,7 @@ function validCidr(value) {
   return parts.length === 2 && validIp(parts[0]) && /^\d{1,2}$/.test(parts[1]) && Number(parts[1]) <= 32;
 }
 
-function submitForm(event) {
+async function submitForm(event) {
   event.preventDefault();
   if (!editing) return;
   const isEditing = Boolean(editing.id);
@@ -288,7 +265,8 @@ function submitForm(event) {
   const values = Object.fromEntries(form.entries());
   const error = document.getElementById("form-error");
   if (editing.type === "device") {
-    const duplicate = data.devices.some(device => device.ip === values.ip.trim() && device.id !== editing.id);
+    const duplicate = data.devices.some(device => device.ip === values.ip.trim()
+      && String(device.networkId) === values.networkId && String(device.id) !== String(editing.id));
     if (!validIp(values.ip)) {
       error.textContent = "กรุณากรอก IP Address ให้ถูกต้อง เช่น 192.168.1.10";
       return;
@@ -301,17 +279,23 @@ function submitForm(event) {
       error.textContent = "กรุณาเลือกเครือข่ายที่ถูกต้อง";
       return;
     }
-    if (editing.id) {
-      const device = getDevice(editing.id);
-      Object.assign(device, values, { ip: values.ip.trim() });
-    } else {
-      const device = { ...values, id: `dev-${crypto.randomUUID()}`, ip: values.ip.trim(), status: "unknown", response: null, checkedAt: null, active: true };
-      data.devices.push(device);
+    const payload = {
+      ...values,
+      id: editing.id,
+      ip: values.ip.trim(),
+      networkId: Number(values.networkId)
+    };
+    try {
+      await apiRequest("devices.php", {
+        method: isEditing ? "PUT" : "POST",
+        body: JSON.stringify(payload)
+      });
+      await refreshData();
+      closeModal();
+      showToast(isEditing ? "บันทึกการแก้ไขอุปกรณ์แล้ว" : "เพิ่มอุปกรณ์แล้ว");
+    } catch (requestError) {
+      error.textContent = requestError.message;
     }
-    if (!saveData()) return;
-    closeModal();
-    render();
-    showToast(isEditing ? "บันทึกการแก้ไขอุปกรณ์แล้ว" : "เพิ่มอุปกรณ์แล้ว รอผลตรวจสอบ");
     return;
   }
   if (!validCidr(values.cidr)) {
@@ -322,12 +306,17 @@ function submitForm(event) {
     error.textContent = "กรุณากรอก Gateway เป็น IP Address ที่ถูกต้อง";
     return;
   }
-  if (editing.id) Object.assign(data.networks.find(network => network.id === editing.id), values);
-  else data.networks.push({ ...values, id: `net-${crypto.randomUUID()}`, active: true });
-  if (!saveData()) return;
-  closeModal();
-  render();
-  showToast("บันทึกข้อมูลเครือข่ายแล้ว");
+  try {
+    await apiRequest("networks.php", {
+      method: isEditing ? "PUT" : "POST",
+      body: JSON.stringify({ ...values, id: editing.id })
+    });
+    await refreshData();
+    closeModal();
+    showToast(isEditing ? "บันทึกข้อมูลเครือข่ายแล้ว" : "เพิ่มเครือข่ายแล้ว");
+  } catch (requestError) {
+    error.textContent = requestError.message;
+  }
 }
 
 function exportCsv(historyOnly = false) {
@@ -347,7 +336,7 @@ function exportCsv(historyOnly = false) {
   showToast("ดาวน์โหลดรายงาน CSV แล้ว");
 }
 
-function onClick(event) {
+async function onClick(event) {
   const action = event.target.closest("[data-action]");
   if (action) {
     if (action.dataset.action === "add-device") {
@@ -374,15 +363,47 @@ function onClick(event) {
   }
   const acknowledge = event.target.closest("[data-ack-alert]");
   if (acknowledge) {
-    const alert = data.alerts.find(item => item.id === acknowledge.dataset.ackAlert);
-    if (alert) {
-      alert.acknowledged = true;
-      alert.acknowledgedAt = new Date().toISOString();
-      alert.acknowledgedBy = "เจ้าหน้าที่ระบบ";
-      if (saveData()) {
-        render();
-        showToast("ทำเครื่องหมายรับทราบแล้ว");
-      }
+    try {
+      await apiRequest("alerts.php", {
+        method: "PATCH",
+        body: JSON.stringify({ id: Number(acknowledge.dataset.ackAlert) })
+      });
+      await refreshData();
+      showToast("ทำเครื่องหมายรับทราบแล้ว");
+    } catch (requestError) {
+      showToast(requestError.message);
+    }
+    return;
+  }
+  const deactivateDevice = event.target.closest("[data-deactivate-device]");
+  if (deactivateDevice) {
+    const device = getDevice(deactivateDevice.dataset.deactivateDevice);
+    if (!device || !window.confirm(`ปิดใช้งานอุปกรณ์ ${device.name} หรือไม่?`)) return;
+    try {
+      await apiRequest("devices.php", {
+        method: "DELETE",
+        body: JSON.stringify({ id: device.id })
+      });
+      await refreshData();
+      showToast("ปิดใช้งานอุปกรณ์แล้ว");
+    } catch (requestError) {
+      showToast(requestError.message);
+    }
+    return;
+  }
+  const deactivateNetwork = event.target.closest("[data-deactivate-network]");
+  if (deactivateNetwork) {
+    const network = getNetwork(deactivateNetwork.dataset.deactivateNetwork);
+    if (!network || !window.confirm(`ปิดใช้งานเครือข่าย ${network.name} หรือไม่?`)) return;
+    try {
+      await apiRequest("networks.php", {
+        method: "DELETE",
+        body: JSON.stringify({ id: network.id })
+      });
+      await refreshData();
+      showToast("ปิดใช้งานเครือข่ายแล้ว");
+    } catch (requestError) {
+      showToast(requestError.message);
     }
   }
 }
@@ -407,23 +428,27 @@ document.addEventListener("keydown", event => {
 ["alert-search", "alert-filter"].forEach(id => bind(id, id.includes("search") ? "input" : "change", renderAlerts));
 bind("mobile-menu", "click", () => document.getElementById("sidebar").classList.toggle("open"));
 bind("banner-close", "click", () => document.querySelector(".demo-banner")?.remove());
-bind("save-settings", "click", () => {
+bind("save-settings", "click", async () => {
   const interval = Number(document.getElementById("interval-setting").value);
   const retries = Number(document.getElementById("retries-setting").value);
   if (!Number.isInteger(interval) || interval < 15 || interval > 3600 || !Number.isInteger(retries) || retries < 1 || retries > 10) {
     showToast("ค่ารอบตรวจต้องอยู่ระหว่าง 15–3600 วินาที และจำนวนครั้ง 1–10");
     return;
   }
-  data.settings = { interval, retries };
-  if (saveData()) showToast("บันทึกการตั้งค่าตัวอย่างแล้ว");
-});
-bind("reset-demo", "click", () => {
-  if (!window.confirm("คืนค่าข้อมูลตัวอย่างและลบข้อมูลที่บันทึกในเบราว์เซอร์นี้หรือไม่?")) return;
-  data = clone(initialData);
-  if (saveData()) {
-    render();
-    showToast("คืนค่าข้อมูลตัวอย่างแล้ว");
+  try {
+    await apiRequest("settings.php", {
+      method: "PUT",
+      body: JSON.stringify({ interval, retries })
+    });
+    await refreshData();
+    showToast("บันทึกการตั้งค่าแล้ว");
+  } catch (requestError) {
+    showToast(requestError.message);
   }
 });
 
-render();
+refreshData().catch(error => {
+  console.error("โหลดข้อมูลระบบไม่สำเร็จ", error);
+  showToast(error.message);
+  render();
+});

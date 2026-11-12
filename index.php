@@ -7,7 +7,7 @@ require __DIR__ . '/includes/header.php';
             <div><div class="eyebrow">NETWORK OVERVIEW</div><h1>ภาพรวมระบบ</h1><p>ติดตามสถานะอุปกรณ์เครือข่ายของคุณได้ในที่เดียว</p></div>
             <button class="button button-primary" data-action="add-device"><span class="button-plus">＋</span> เพิ่มอุปกรณ์</button>
           </div>
-          <div class="demo-banner"><span class="banner-icon">ⓘ</span><span><strong>นี่คือข้อมูลตัวอย่าง</strong> สถานะที่แสดงยังไม่ได้ตรวจด้วย ICMP Ping จริง เชื่อมต่อ Monitor Worker เพื่อใช้งานจริง</span><button class="banner-close" id="banner-close" aria-label="ปิด">×</button></div>
+          <div class="demo-banner"><span class="banner-icon">ⓘ</span><span><strong>สถานะอุปกรณ์มาจากผลตรวจล่าสุด</strong> หากยังไม่มี Monitor Worker ผลตรวจจะแสดงเป็นไม่ทราบสถานะ</span><button class="banner-close" id="banner-close" aria-label="ปิด">×</button></div>
           <div class="stat-grid">
             <article class="stat-card"><div class="stat-top"><span>อุปกรณ์ทั้งหมด</span><span class="stat-icon total-icon">▦</span></div><div class="stat-value" id="stat-total">0</div><div class="stat-foot"><span class="stat-caption">รายการที่ลงทะเบียน</span></div></article>
             <article class="stat-card"><div class="stat-top"><span>ออนไลน์</span><span class="stat-icon online-icon">↗</span></div><div class="stat-value" id="stat-online">0</div><div class="stat-foot"><span class="status-dot online"></span><span class="stat-caption">ตอบสนองปกติ</span></div></article>

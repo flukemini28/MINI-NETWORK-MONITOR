@@ -18,13 +18,14 @@ $title = $currentPage === 'settings' ? 'การตั้งค่า' : ($page
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f5f7fb">
+  <meta name="csrf-token" content="<?= htmlspecialchars(csrfToken(), ENT_QUOTES, 'UTF-8') ?>">
   <title><?= htmlspecialchars($title, ENT_QUOTES, 'UTF-8') ?> | Mini Network Monitor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body data-user-role="<?= htmlspecialchars($user['role'], ENT_QUOTES, 'UTF-8') ?>">
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
       <a class="brand" href="index.php" aria-label="Mini Network Monitor">
@@ -44,8 +45,8 @@ $title = $currentPage === 'settings' ? 'การตั้งค่า' : ($page
       </nav>
       <div class="sidebar-bottom">
         <div class="worker-card">
-          <div class="worker-top"><span class="worker-indicator"></span><span>โหมดตัวอย่าง</span><span class="worker-tag">DEMO</span></div>
-          <p>ข้อมูลตัวอย่างในเบราว์เซอร์<br>ยังไม่ได้เชื่อมต่อระบบ Ping</p>
+          <div class="worker-top"><span class="worker-indicator"></span><span>ฐานข้อมูลกลาง</span><span class="worker-tag">DB</span></div>
+          <p>ข้อมูลระบบจัดเก็บบน MariaDB<br>ตรวจเฉพาะอุปกรณ์ที่ลงทะเบียน</p>
         </div>
         <a class="nav-link settings-link<?= $currentPage === 'settings' ? ' active' : '' ?>" href="settings.php"><span class="nav-icon">⚙</span><span>การตั้งค่า</span></a>
         <div class="user-card"><div class="avatar">IT</div><div class="user-info"><strong><?= htmlspecialchars($user['display_name'], ENT_QUOTES, 'UTF-8') ?></strong><small><?= htmlspecialchars(['admin' => 'ผู้ดูแลระบบ', 'operator' => 'เจ้าหน้าที่ IT', 'viewer' => 'ผู้ดูข้อมูล'][$user['role']] ?? 'ผู้ใช้', ENT_QUOTES, 'UTF-8') ?></small></div><form class="logout-form" method="post" action="logout.php"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrfToken(), ENT_QUOTES, 'UTF-8') ?>"><button class="logout-button" type="submit">ออกจากระบบ</button></form></div>
