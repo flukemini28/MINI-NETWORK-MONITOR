@@ -128,7 +128,7 @@ C:\xampp\php\php.exe tests\test_login_rate_limit.php
 - ยังไม่มีอีเมลกู้คืนรหัสผ่านอัตโนมัติ; admin ต้องตั้งรหัสผ่านใหม่ให้ผู้ใช้
 - การทดสอบนี้ไม่ได้ตรวจความพร้อมระดับ production เช่น การกู้คืนรหัสผ่านทางอีเมลและการทดสอบโหลด/ติดตั้งในสภาพแวดล้อมจริง
 
-id users 
+id users (เครื่องกู)
     Admin    : admin@example.local / password : 12345
     operator : operator@example.local / password : 12345
     viewer   : users@example.local / password : 12345
