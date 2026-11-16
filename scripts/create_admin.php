@@ -16,7 +16,7 @@ if ($argc !== 3) {
 [$script, $username, $email] = $argv;
 fwrite(STDOUT, 'Admin display name: ');
 $displayName = trim((string) fgets(STDIN));
-fwrite(STDOUT, 'Admin password (minimum 12 characters): ');
+fwrite(STDOUT, 'Admin password (minimum 5 characters): ');
 $password = trim((string) fgets(STDIN));
 
 if (!preg_match('/^[A-Za-z0-9._-]{3,50}$/', $username)) {
@@ -27,8 +27,8 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254) {
     fwrite(STDERR, "A valid email address is required.\n");
     exit(1);
 }
-if ($displayName === '' || strlen($displayName) > 120 || strlen($password) < 12) {
-    fwrite(STDERR, "Display name is required and password must contain at least 12 characters.\n");
+if ($displayName === '' || strlen($displayName) > 120 || strlen($password) < 5) {
+    fwrite(STDERR, "Display name is required and password must contain at least 5 characters.\n");
     exit(1);
 }
 

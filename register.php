@@ -30,8 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'ชื่อผู้ใช้ต้องยาว 3–50 ตัว และใช้ a-z, 0-9, จุด, ขีดกลาง หรือขีดล่าง';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254) {
         $error = 'กรุณากรอกอีเมลให้ถูกต้อง';
-    } elseif (strlen($password) < 12 || strlen($password) > 1024) {
-        $error = 'รหัสผ่านต้องมีความยาว 12–1024 ตัวอักษร';
+    } elseif (strlen($password) < 5 || strlen($password) > 1024) {
+        $error = 'รหัสผ่านต้องมีความยาว 5 ตัวอักษร';
     } elseif ($password !== $passwordConfirmation) {
         $error = 'รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน';
     } else {

@@ -127,3 +127,8 @@ C:\xampp\php\php.exe tests\test_login_rate_limit.php
 - สคริปต์ Task Scheduler เพิ่มแล้ว แต่ยังต้องให้ผู้ดูแลรัน `install_worker_task.ps1` ด้วยตนเอง แล้วตรวจสถานะ task และ heartbeat บนเครื่องใช้งาน
 - ยังไม่มีอีเมลกู้คืนรหัสผ่านอัตโนมัติ; admin ต้องตั้งรหัสผ่านใหม่ให้ผู้ใช้
 - การทดสอบนี้ไม่ได้ตรวจความพร้อมระดับ production เช่น การกู้คืนรหัสผ่านทางอีเมลและการทดสอบโหลด/ติดตั้งในสภาพแวดล้อมจริง
+
+id users 
+    Admin    : admin@example.local / password : 12345
+    operator : operator@example.local / password : 12345
+    viewer   : users@example.local / password : 12345
