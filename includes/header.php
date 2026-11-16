@@ -9,6 +9,7 @@ $pages = [
     'network' => ['title' => 'เครือข่าย', 'file' => 'network.php', 'icon' => '⌘'],
     'history' => ['title' => 'ประวัติการตรวจ', 'file' => 'history.php', 'icon' => '◷'],
     'alerts' => ['title' => 'การแจ้งเตือน', 'file' => 'alerts.php', 'icon' => '♧'],
+    'users' => ['title' => 'จัดการผู้ใช้', 'file' => 'users.php', 'icon' => '♙'],
 ];
 $title = $currentPage === 'settings' ? 'การตั้งค่า' : ($pages[$currentPage]['title'] ?? 'ภาพรวมระบบ');
 ?>
@@ -35,6 +36,7 @@ $title = $currentPage === 'settings' ? 'การตั้งค่า' : ($page
       <div class="workspace-label">WORKSPACE</div>
       <nav class="main-nav" aria-label="เมนูหลัก">
         <?php foreach ($pages as $key => $page): ?>
+          <?php if ($key === 'users' && $user['role'] !== 'admin') { continue; } ?>
           <a class="nav-link<?= $currentPage === $key ? ' active' : '' ?>" href="<?= htmlspecialchars($page['file'], ENT_QUOTES, 'UTF-8') ?>">
             <span class="nav-icon"><?= htmlspecialchars($page['icon'], ENT_QUOTES, 'UTF-8') ?></span>
             <span><?= htmlspecialchars($page['title'], ENT_QUOTES, 'UTF-8') ?></span>

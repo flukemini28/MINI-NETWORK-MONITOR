@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(254) NOT NULL,
   display_name VARCHAR(120) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
+  auth_version INT UNSIGNED NOT NULL DEFAULT 0,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -33,6 +34,16 @@ CREATE TABLE IF NOT EXISTS users (
   UNIQUE KEY uq_users_email (email),
   KEY ix_users_role_active (role_id, is_active),
   CONSTRAINT fk_users_role FOREIGN KEY (role_id) REFERENCES roles (id)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS login_rate_limits (
+  bucket_hash CHAR(64) NOT NULL,
+  failed_attempts SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  window_started_at DATETIME NOT NULL,
+  locked_until DATETIME NULL,
+  PRIMARY KEY (bucket_hash),
+  KEY ix_login_rate_limits_locked_until (locked_until),
+  KEY ix_login_rate_limits_window_started_at (window_started_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS networks (

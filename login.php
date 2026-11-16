@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/session.php';
 require_once __DIR__ . '/includes/database.php';
+require_once __DIR__ . '/includes/login_rate_limit.php';
 
 startAppSession();
 if (isset($_SESSION['user'])) {
@@ -13,7 +14,7 @@ if (isset($_SESSION['user'])) {
 $error = '';
 $notice = isset($_GET['registered']) ? 'สมัครสมาชิกสำเร็จ กรุณาเข้าสู่ระบบ' : '';
 $next = $_GET['next'] ?? 'index.php';
-$allowedReturnPages = ['index.php', 'devices.php', 'network.php', 'history.php', 'alerts.php', 'settings.php'];
+$allowedReturnPages = ['index.php', 'devices.php', 'network.php', 'history.php', 'alerts.php', 'settings.php', 'users.php'];
 if (!is_string($next) || !in_array($next, $allowedReturnPages, true)) {
     $next = 'index.php';
 }
@@ -34,33 +35,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'กรุณากรอกชื่อผู้ใช้หรืออีเมล และรหัสผ่าน';
         } else {
             try {
-                $statement = dbConnection()->prepare(
-                    'SELECT u.id, u.username, u.display_name, u.password_hash, u.is_active, r.role_key
-                     FROM users u JOIN roles r ON r.id = u.role_id
-                     WHERE u.username = :username OR u.email = :email
-                     LIMIT 1'
-                );
-                $statement->execute([
-                    'username' => $identifier,
-                    'email' => strtolower($identifier),
-                ]);
-                $user = $statement->fetch();
-
-                if (!$user || !$user['is_active'] || !password_verify($password, $user['password_hash'])) {
-                    $error = 'ชื่อผู้ใช้/อีเมล หรือรหัสผ่านไม่ถูกต้อง';
+                $pdo = dbConnection();
+                $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+                if (loginRateLimitIsBlocked($pdo, $ipAddress, $identifier)) {
+                    $error = 'เข้าสู่ระบบไม่สำเร็จหลายครั้ง กรุณารอ 15 นาทีแล้วลองใหม่';
                 } else {
-                    session_regenerate_id(true);
-                    $_SESSION['user'] = [
-                        'id' => (int) $user['id'],
-                        'username' => $user['username'],
-                        'display_name' => $user['display_name'],
-                        'role' => $user['role_key'],
-                    ];
-                    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-                    $update = dbConnection()->prepare('UPDATE users SET last_login_at = NOW() WHERE id = :id');
-                    $update->execute(['id' => $user['id']]);
-                    header('Location: ' . $next);
-                    exit;
+                    $statement = $pdo->prepare(
+                        'SELECT u.id, u.username, u.display_name, u.password_hash, u.auth_version, u.is_active, r.role_key
+                         FROM users u JOIN roles r ON r.id = u.role_id
+                         WHERE u.username = :username OR u.email = :email
+                         LIMIT 1'
+                    );
+                    $statement->execute([
+                        'username' => $identifier,
+                        'email' => strtolower($identifier),
+                    ]);
+                    $user = $statement->fetch();
+
+                    if (!$user || !$user['is_active'] || !password_verify($password, $user['password_hash'])) {
+                        loginRateLimitRecordFailure($pdo, $ipAddress, $identifier);
+                        $error = 'ชื่อผู้ใช้/อีเมล หรือรหัสผ่านไม่ถูกต้อง';
+                    } else {
+                        loginRateLimitClearIdentity($pdo, $ipAddress, $identifier);
+                        session_regenerate_id(true);
+                        $_SESSION['user'] = [
+                            'id' => (int) $user['id'],
+                            'username' => $user['username'],
+                            'display_name' => $user['display_name'],
+                            'role' => $user['role_key'],
+                            'auth_version' => (int) $user['auth_version'],
+                        ];
+                        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+                        $update = $pdo->prepare('UPDATE users SET last_login_at = NOW() WHERE id = :id');
+                        $update->execute(['id' => $user['id']]);
+                        header('Location: ' . $next);
+                        exit;
+                    }
                 }
             } catch (PDOException $exception) {
                 error_log($exception->getMessage());

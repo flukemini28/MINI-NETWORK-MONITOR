@@ -30,8 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'ชื่อผู้ใช้ต้องยาว 3–50 ตัว และใช้ a-z, 0-9, จุด, ขีดกลาง หรือขีดล่าง';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254) {
         $error = 'กรุณากรอกอีเมลให้ถูกต้อง';
-    } elseif (strlen($password) < 5) {
-        $error = 'รหัสผ่านต้องมีอย่างน้อย 5 ตัวอักษร';
+    } elseif (strlen($password) < 12 || strlen($password) > 1024) {
+        $error = 'รหัสผ่านต้องมีความยาว 12–1024 ตัวอักษร';
     } elseif ($password !== $passwordConfirmation) {
         $error = 'รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน';
     } else {
@@ -97,10 +97,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <input class="field-control" id="username" name="username" minlength="3" maxlength="50" pattern="[A-Za-z0-9._-]+" autocomplete="username" required value="<?= htmlspecialchars($username, ENT_QUOTES, 'UTF-8') ?>">
       <label class="form-label" for="email">อีเมล</label>
       <input class="field-control" id="email" name="email" type="email" maxlength="254" autocomplete="email" required value="<?= htmlspecialchars($email, ENT_QUOTES, 'UTF-8') ?>">
-      <label class="form-label" for="password">รหัสผ่าน (อย่างน้อย 5 ตัวอักษร)</label>
-      <input class="field-control" id="password" name="password" type="password" minlength="5" autocomplete="new-password" required>
+      <label class="form-label" for="password">รหัสผ่าน (5 ตัวอักษร)</label>
+      <input class="field-control" id="password" name="password" type="password" minlength="5"autocomplete="new-password" required>
       <label class="form-label" for="password_confirmation">ยืนยันรหัสผ่าน</label>
-      <input class="field-control" id="password_confirmation" name="password_confirmation" type="password" minlength="5" autocomplete="new-password" required>
+      <input class="field-control" id="password_confirmation" name="password_confirmation" type="password" minlength="5"autocomplete="new-password" required>
       <button class="button button-primary auth-submit" type="submit">สร้างบัญชี</button>
     </form>
     <p class="auth-switch">มีบัญชีแล้ว? <a href="login.php">เข้าสู่ระบบ</a></p>
